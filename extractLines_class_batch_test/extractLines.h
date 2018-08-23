@@ -14,7 +14,7 @@
 #define LINE_MAX_POINTS 1024
 #define LINE_MAX_NUMS 64
 #define LINE_LEAST_POINTS 10
-#define GRAD_THRESH_VAL 10
+#define GRAD_THRESH_VAL 15
 
 typedef unsigned char uchar;
 typedef struct _imgSize
@@ -63,6 +63,7 @@ private:
 	int pixelGrade(uchar* pImg, mPoint pt);
 	void gradGraph();
 	void mark_lines();
+	void wipe_singular_points(uchar* pThin);
 
 public:
 	mSize srcImgSize;

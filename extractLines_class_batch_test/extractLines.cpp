@@ -51,9 +51,125 @@ void ExtractLines::gradGraph()
 	}
 }
 
+void ExtractLines::wipe_singular_points(uchar* pThin)
+{
+	//del illegal points
+	int upNum;
+	int botNum;
+	unsigned int val0;
+	unsigned int val1;
+	unsigned int val2;
+	unsigned int val3;
+	unsigned int val4;
+	const int lagVal = 3;
+
+	for (int y = 1; y < rows - 2; ++y)
+	{
+		for (int x = 1; x < cols - 2; ++x)
+		{
+			val0 = pCpyImg[y * cols + x];
+			val1 = pCpyImg[y * cols + x - 1];
+			val2 = pCpyImg[y * cols + x + 1];
+			val3 = pCpyImg[(y - 1) * cols + x];
+			val4 = pCpyImg[(y + 1) * cols + x];
+
+			if ((val1 == 255 && val3 == 255 && val2 == 0 && val4 == 0 && val0 == 255)
+				|| (val1 == 0 && val2 == 255 && val3 == 255 && val4 == 0 && val0 == 255)
+				|| (val1 == 0 && val2 == 0 && val3 == 255 && val4 == 0 && val0 == 255))
+			{
+				pCpyImg[y * cols + x] = 0;
+			}
+
+			//3 connected point
+			if (val1 + val2 + val3 + val4 == 255 * 3)
+			{
+				if (pCpyImg[(y - 1) * cols + x] == 0 && pCpyImg[(y + 1) * cols + x] == 255)
+				{
+					pCpyImg[(y + 1) * cols + x] = 0;
+				}
+				else if (pCpyImg[(y + 1) * cols + x] == 0 && pCpyImg[(y - 1) * cols + x] == 255)
+				{
+					pCpyImg[(y - 1) * cols + x] = 0;
+				}
+				else
+				{
+					pCpyImg[y * cols + x] = 0;
+
+					upNum = 0;
+					botNum = 0;;
+					for (int j = -3; j <= 3; j++)
+					{
+						if (x + j > 0 && x + j < cols && pCpyImg[(y - 1) * cols + x + j] == 255)
+						{
+							upNum++;
+						}
+						if (x + j > 0 && x + j < cols && pCpyImg[(y + 1) * cols + x + j] == 255)
+						{
+							botNum++;
+						}
+					}
+
+
+					if (upNum > botNum)
+					{
+						pCpyImg[(y + 1) * cols + x] = 0;
+					}
+					else
+					{
+						pCpyImg[(y - 1) * cols + x] = 0;
+					}
+
+				}
+
+			}
+
+			if (y - lagVal > 0)
+			{
+				val0 = pCpyImg[(y - lagVal) * cols + x];
+				val1 = pCpyImg[(y - lagVal) * cols + x - 1];
+				val2 = pCpyImg[(y - lagVal) * cols + x + 1];
+				val3 = pCpyImg[(y - 1 - lagVal) * cols + x];
+				val4 = pCpyImg[(y + 1 - lagVal) * cols + x];
+				if ((val1 == 0 && val2 == 0 && val3 == 0 && val4 == 255 && val0 == 255)
+					|| (val1 == 0 && val2 == 0 && val3 == 255 && val4 == 0 && val0 == 255))
+				{
+					pCpyImg[(y - lagVal) * cols + x] = 0;
+				}
+			}
+
+		}
+	}
+
+
+	for (int y = 1; y < rows - 2; ++y)
+	{
+		for (int x = 1; x < cols - 2; ++x)
+		{
+			//del corner point
+			//  1          1        1
+			//1 1 0		 0 1 1    0 1 0
+			//  0          0        0
+
+			val0 = pCpyImg[y * cols + x];
+			val1 = pCpyImg[y * cols + x - 1];
+			val2 = pCpyImg[y * cols + x + 1];
+			val3 = pCpyImg[(y - 1) * cols + x];
+			val4 = pCpyImg[(y + 1) * cols + x];
+
+			if ((val1 == 255 && val3 == 255 && val2 == 0 && val4 == 0 && val0 == 255)
+				|| (val1 == 0 && val2 == 255 && val3 == 255 && val4 == 0 && val0 == 255)
+				|| (val1 == 0 && val2 == 0 && val3 == 255 && val4 == 0 && val0 == 255))
+			{
+				pCpyImg[y * cols + x] = 0;
+			}
+		}
+	}
+}
+
 void ExtractLines::mark_lines()
 {
 	uchar* pThin = makeImgThinner(pGrdImg);
+	wipe_singular_points(pThin);
 
 	memcpy(pThinImg, pThin, rows * cols * sizeof(uchar));
 
@@ -68,7 +184,6 @@ void ExtractLines::mark_lines()
 		{
 			markedLines.push_back(linePts);
 		}
-
 	}
 
 	//convert data
@@ -114,6 +229,7 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 	linePts.push_back(pt);
 
 	mPoint seed;
+	mPoint tmpPt;
 	while (!seeds.empty())
 	{
 		seed = seeds.top();
@@ -129,11 +245,11 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 
 			if (pThin[tmpy * cols + tmpx] != 0)
 			{
-				mPoint tmpPt;
+				tmpPt;
 				tmpPt.x = tmpx;
 				tmpPt.y = tmpy;
 
-				if (tmpPt.x >= linePts.back().x)
+				if (tmpPt.x >= linePts.back().x )
 				{
 					linePts.push_back(tmpPt);
 				}
@@ -141,7 +257,7 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 				{
 					linePts.push_front(tmpPt);
 				}
-
+				
 				pThin[tmpy * cols + tmpx] = 0;
 
 				seeds.push(tmpPt);
@@ -651,62 +767,6 @@ uchar* ExtractLines::makeImgThinner(uchar* ptrImg, const int maxIterations)
 	for (int i = 0; i < rows * cols; ++i)
 	{
 		pCpyImg[i] *= 255;
-	}
-
-	//del 3 connect point
-	int upNum;
-	int botNum;
-	for (int y = 1; y < rows - 2; ++y)
-	{
-		for (int x = 1; x < cols - 2; ++x)
-		{
-			unsigned int val1 = pCpyImg[y * cols + x - 1];
-			unsigned int val2 = pCpyImg[y * cols + x + 1];
-			unsigned int val3 = pCpyImg[(y - 1) * cols + x];
-			unsigned int val4 = pCpyImg[(y + 1) * cols + x];
-
-			if (val1 + val2 + val3 + val4 == 255 * 3)
-			{
-				if (pCpyImg[(y - 1) * cols + x] == 0 && pCpyImg[(y + 1) * cols + x] == 255)
-				{
-					pCpyImg[(y + 1) * cols + x] = 0;
-				}
-				else if (pCpyImg[(y + 1) * cols + x] == 0 && pCpyImg[(y - 1) * cols + x] == 255)
-				{
-					pCpyImg[(y - 1) * cols + x] = 0;
-				}
-				else
-				{
-					pCpyImg[y * cols + x] = 0;
-
-					upNum = 0;
-					botNum = 0;;
-					for (int j = -3; j <= 3; j++)
-					{
-						if (x + j > 0 && x + j < cols && pCpyImg[(y - 1) * cols + x + j] == 255)
-						{
-							upNum++;
-						}
-						if (x + j > 0 && x + j < cols && pCpyImg[(y + 1) * cols + x + j] == 255)
-						{
-							botNum++;
-						}
-					}
-
-
-					if (upNum > botNum)
-					{
-						pCpyImg[(y + 1) * cols + x] = 0;
-					}
-					else 
-					{
-						pCpyImg[(y - 1) * cols + x] = 0;
-					}
-	
-				}
-			
-			}
-		}
 	}
 
 	return pCpyImg;

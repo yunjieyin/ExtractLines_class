@@ -106,19 +106,34 @@ void drawLinesOnSrcImg(cv::Mat& img, std::vector<std::deque<cv::Point>> lines, s
 		int nLineNum = linesVec.size();
 		std::string str = "lines number = " + std::to_string(nLineNum);
 		cv::putText(img, str, cv::Point(20, 20), cv::FONT_HERSHEY_COMPLEX, 0.5, cv::Scalar(0, 0, 255));
-		//cv::imwrite("E:\\pictures\\coil\\lines.bmp", draw_img);
-		cv::imwrite("E:\\pictures\\coil\\testResult_1D\\" + picName, img);
+
+		/*the path of to be write*/
+		//cv::imwrite("E:\\pictures\\coil\\testResult_1D\\" + picName, img);
+		//cv::imwrite("E:\\pictures\\coil\\rawTest\\" + picName, img);
+		//cv::imwrite("E:\\pictures\\coil\\0630Test\\" + picName, img);
+		cv::imwrite("E:\\pictures\\coil\\allTest\\" + picName, img);
 	}
 }
 
 void batch_test()
 {
-	std::string dir_path = "E:\\pictures\\coil\\roi_20180820\\";
+	//std::string dir_path = "E:\\pictures\\coil\\roi_20180820\\";
+	//std::string dir_path = "E:\\pictures\\coil\\roi(1)\\";
+	//std::string dir_path = "E:\\pictures\\coil\\raw\\";
+	//std::string dir_path = "E:\\pictures\\coil\\0630\\";
+	std::string dir_path = "E:\\pictures\\coil\\all\\";
+
+
 	Directory dir;
 	std::vector<std::string> picNames = dir.GetListFiles(dir_path, "*.bmp", false);
 
 	std::vector<cv::String> fileNames;
-	cv::glob("E:\\pictures\\coil\\roi_20180820\\*.bmp", fileNames, true);
+	//cv::glob("E:\\pictures\\coil\\roi_20180820\\*.bmp", fileNames, true);
+	//cv::glob("E:\\pictures\\coil\\roi(1)\\*.bmp", fileNames, true);
+	//cv::glob("E:\\pictures\\coil\\raw\\*.bmp", fileNames, true);
+	//cv::glob("E:\\pictures\\coil\\0630\\*.bmp", fileNames, true);
+	cv::glob("E:\\pictures\\coil\\all\\*.bmp", fileNames, true);
+
 
 	cv::Mat imgSrc;
 	cv::Mat imgGray;
@@ -146,6 +161,12 @@ void batch_test()
 			for (int j = 0; j < line.markedLines[i].size(); j++)
 			{
 				cv::Point cv_pt(line.markedLines[i][j].x, line.markedLines[i][j].y);
+				if (cv_line.size() > 0 && abs(cv_pt.x - cv_line.back().x) > 1
+					|| cv_line.size() > 0 && (cv_pt.x - cv_line.back().x) < 0)
+				{
+					std::cout << "x index strid:" << cv_pt.x << "," << cv_pt.y  << "index:" << i << std::endl;
+				}
+
 				cv_line.push_back(cv_pt);
 			}
 
@@ -162,12 +183,13 @@ int main()
 {
 	if (1)
 	{
-		cv::Mat img = cv::imread("E:\\pictures\\coil\\roi_20180820\\26-1.bmp", 0);
+		//cv::Mat img = cv::imread("E:\\pictures\\coil\\roi_20180820\\46-7.bmp", 0);
+		/*cv::Mat img = cv::imread("E:\\pictures\\coil\\all\\132-1.bmp", 0);
 		uchar* pImg = MatToArr(img);
-		mSize imgSize = { img.rows, img.cols };
+		mSize imgSize = { img.rows, img.cols };*/
 
 		/*write array data to file*/
-		if (0)
+		/*if (0)
 		{
 			FILE *fp = NULL;
 			if ((fp = fopen("E:\\pictures\\coil\\data.txt", "w")) == NULL)
@@ -181,10 +203,10 @@ int main()
 				fprintf(fp, "%d ", pImg[i]);
 			}
 			fclose(fp);
-		}
+		}*/
 
 		/*read file data to array*/
-		if (0)
+		/*if (0)
 		{
 			uchar* pImgTxt = (uchar *)malloc((imgSize.rows * imgSize.cols) * sizeof(uchar));
 			if (pImgTxt == NULL)
@@ -208,7 +230,7 @@ int main()
 				fscanf(fp, "%d", &data);
 				pImgTxt[i++] = data;
 			}
-		}
+		}*/
 
 
 		//主入口函数
@@ -219,9 +241,9 @@ int main()
 		cv::Mat grd = arryToMat(line.pGrdImg, img.rows, img.cols);*/
 
 		batch_test();
-
-
+		
 	}
 
+	std::getchar();
 	return 0;
 }
