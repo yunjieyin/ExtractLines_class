@@ -73,6 +73,7 @@ public:
 	unsigned int cols;
 
 public:
+	uchar* pIndex = NULL;
 	uchar* pSrcImg = NULL;
 	uchar* pGrdImg = NULL;
 	uchar* pCpyImg = NULL;

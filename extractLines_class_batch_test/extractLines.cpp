@@ -7,21 +7,7 @@ ExtractLines::ExtractLines(uchar* pImg, mSize imgSize)
 	srcImgSize = imgSize;
 	rows = srcImgSize.rows;
 	cols = srcImgSize.cols;
-
-	pSrcImg = (uchar*)malloc((rows * cols) * sizeof(uchar));
-	memcpy(pSrcImg, pImg, (rows * cols) * sizeof(uchar));
-
-	pGrdImg = (uchar*)malloc((rows * cols) * sizeof(uchar));
-	memset(pGrdImg, 0, rows*cols * sizeof(uchar));
-
-	pCpyImg = (uchar*)malloc(rows * cols * sizeof(uchar));
-	pChar = (uchar**)malloc(rows * cols * sizeof(uchar*));
-
-	pThinImg = (uchar*)malloc(rows * cols * sizeof(uchar));
-
-	assert(pSrcImg && pGrdImg && pCpyImg && pChar && pThinImg);
-
-	//linesData();
+	pIndex = pImg;
 }
 
 ExtractLines::~ExtractLines()
@@ -202,6 +188,18 @@ void ExtractLines::mark_lines()
 
 void ExtractLines::linesData()
 {
+	pSrcImg = (uchar*)malloc((rows * cols) * sizeof(uchar));
+	memcpy(pSrcImg, pIndex, (rows * cols) * sizeof(uchar));
+
+	pGrdImg = (uchar*)malloc((rows * cols) * sizeof(uchar));
+	memset(pGrdImg, 0, rows*cols * sizeof(uchar));
+
+	pCpyImg = (uchar*)malloc(rows * cols * sizeof(uchar));
+	pChar = (uchar**)malloc(rows * cols * sizeof(uchar*));
+
+	pThinImg = (uchar*)malloc(rows * cols * sizeof(uchar));
+	assert(pIndex && pSrcImg && pGrdImg && pCpyImg && pChar && pThinImg);
+
 	gradGraph();
 	filterPixels(pGrdImg);
 	mark_lines();
