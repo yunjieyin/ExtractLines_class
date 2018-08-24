@@ -22,7 +22,10 @@ ExtractLines::~ExtractLines()
 void ExtractLines::gradGraph()
 {
 	mPoint pt;
-	int gd = 0;
+	int nStride = 2;
+	int dx;
+	int dy;
+	int grade;
 
 	for (int x = 1; x < cols - 1; x = x + 1)
 	{
@@ -31,8 +34,37 @@ void ExtractLines::gradGraph()
 			pt.x = x;
 			pt.y = y;
 
-			gd = abs(pixelGrade(pSrcImg, pt));
-			pGrdImg[y * cols + x] = gd;
+			if (pt.y + nStride <= rows - 1)
+			{
+				dy = pSrcImg[cols * (pt.y + nStride) + pt.x] - pSrcImg[cols * pt.y + pt.x];
+			}
+			else
+			{
+				dy = 0;
+			}
+
+			if (pt.x + nStride <= cols - 1)
+			{
+				dx = pSrcImg[cols * pt.y + pt.x + nStride] - pSrcImg[cols * pt.y + pt.x];
+			}
+			else
+			{
+				dx = 0;
+			}
+
+			if (pSrcImg[cols * (pt.y + nStride) + pt.x] > pSrcImg[cols * pt.y + pt.x])
+			{
+				grade = int(dx / 5) + dy;
+			}
+			else
+			{
+				grade = 0;
+			}
+
+			if (grade < GRAD_THRESH_VAL)
+				grade = 0;
+
+			pGrdImg[y * cols + x] = grade;
 		}
 	}
 }
@@ -160,17 +192,17 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 
 void ExtractLines::mark_lines()
 {
-	uchar* pThin = makeImgThinner(pGrdImg);
-	wipe_singular_points(pThin);
+	makeImgThinner();
+	wipe_singular_points(pCpyImg);
 
-	memcpy(pThinImg, pThin, rows * cols * sizeof(uchar));
+	memcpy(pThinImg, pCpyImg, rows * cols * sizeof(uchar));
 
 	mPoint seed;
 	std::deque<mPoint> linePts;
-	while (findFirstPoint(pThin, seed))
+	while (findFirstPoint(pCpyImg, seed))
 	{
 		linePts.clear();
-		mark_connect_region(pThin, seed, linePts);
+		mark_connect_region(pCpyImg, seed, linePts);
 
 		if (linePts.size() > LINE_LEAST_POINTS)
 		{
@@ -207,9 +239,10 @@ void ExtractLines::linesData()
 	assert(pIndex && pSrcImg && pGrdImg && pCpyImg && pChar && pThinImg);
 
 	gradGraph();
-	filterPixels(pGrdImg);
+	grad_graph_binary();
+	padding_points();
+	//filterPixels();
 	mark_lines();
-	//findLines(pThin, linesSet);
 }
 
 void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoint>& linePts)
@@ -249,7 +282,6 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 
 			if (pThin[tmpy * cols + tmpx] != 0)
 			{
-				tmpPt;
 				tmpPt.x = tmpx;
 				tmpPt.y = tmpy;
 
@@ -272,7 +304,6 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 	}
 
 	pThin[pt.y * cols + pt.x] = 0;
-
 }
 
 int ExtractLines::pixelGrade(uchar* pImg, mPoint pt)
@@ -296,7 +327,6 @@ int ExtractLines::pixelGrade(uchar* pImg, mPoint pt)
 	if (pt.x + nStride <= cols - 1)
 	{
 		dx = pImg[cols * pt.y + pt.x + nStride] - pImg[cols * pt.y + pt.x];
-		//dx = 0;
 	}
 	else
 	{
@@ -319,9 +349,122 @@ int ExtractLines::pixelGrade(uchar* pImg, mPoint pt)
 	return grade;
 }
 
-void ExtractLines::filterPixels(uchar* pImg)
+void ExtractLines::grad_graph_binary()
 {
-	assert(pImg != NULL);
+	int sumNeig_9 = 0;
+	const unsigned int neig9SumVal = 30;
+
+	for (int y = 1; y < rows - 1; ++y)
+	{
+		for (int x = 1; x < cols - 1; ++x)
+		{
+			//消除4邻域为空的噪点
+			if (pGrdImg[y * cols + x] > 0 && pGrdImg[(y - 1) * cols + x] == 0 &&
+				pGrdImg[(y + 1) * cols + x] == 0 && pGrdImg[y * cols + x - 1] == 0 &&
+				pGrdImg[y * cols + x + 1] == 0)
+			{
+				pGrdImg[y * cols + x] = 0;
+			}
+
+			//根据八邻域点的平均像素值把当前像素设为背景或前景点
+			sumNeig_9 = pGrdImg[y * cols + x] + pGrdImg[(y - 1) * cols + x - 1] +
+				pGrdImg[(y - 1) * cols + x] + pGrdImg[(y - 1) * cols + x + 1] +
+				pGrdImg[y * cols + x - 1] + pGrdImg[y * cols + x + 1] +
+				pGrdImg[(y + 1) * cols + x - 1] + pGrdImg[(y + 1) * cols + x] +
+				pGrdImg[(y + 1) * cols + x + 1];
+
+			if (sumNeig_9 / 9 < neig9SumVal)
+			{
+				pGrdImg[y * cols + x] = 0;
+			}
+			else if (pGrdImg[y * cols + x] > 0)
+			{
+				pGrdImg[y * cols + x] = 255;
+			}
+		}
+	}
+}
+
+void ExtractLines::padding_points()
+{
+	int bkPtFlag = 0;
+	mPoint pt;
+	mPoint bpt;
+	mPoint holePt;
+	mPoint tmp;
+
+	for (int y = 1; y < rows - 1; ++y)
+	{
+		for (int x = 1; x < cols - 1; ++x)
+		{
+			pt.x = x;
+			pt.y = y;
+
+			//消除满足左右像素点均为背景点的若干点（3）  
+			if (isNisolatePoints(pGrdImg, pt) == 1)
+			{
+				pGrdImg[pt.y * cols + pt.x] = 0;
+			}
+			else if (isNisolatePoints(pGrdImg, pt) == 2)
+			{
+				pGrdImg[pt.y * cols + pt.x] = 0;
+				pGrdImg[pt.y * cols + pt.x + 1] = 0;
+			}
+			else if (isNisolatePoints(pGrdImg, pt) == 3)
+			{
+				pGrdImg[pt.y * cols + pt.x] = 0;
+				pGrdImg[pt.y * cols + pt.x + 1] = 0;
+				pGrdImg[pt.y * cols + pt.x + 2] = 0;
+			}
+
+			/*补水平方向0的点...1***1...*/
+			if (x + 4 < cols && pGrdImg[pt.y * cols + pt.x] == 255 &&
+				(pGrdImg[pt.y * cols + pt.x + 1] == 0 || pGrdImg[pt.y * cols + pt.x + 2] == 0 ||
+					pGrdImg[pt.y * cols + pt.x + 3] == 0) && pGrdImg[pt.y * cols + pt.x + 4] == 255)
+			{
+				pGrdImg[pt.y * cols + pt.x + 1] = 255;
+				pGrdImg[pt.y * cols + pt.x + 2] = 255;
+				pGrdImg[pt.y * cols + pt.x + 3] = 255;
+			}
+
+			//连接水平段的断点
+			bpt.x = x;
+			bpt.y = y - 1;
+
+			bkPtFlag = BreakPoint(pGrdImg, bpt);
+
+			if (bkPtFlag == 1 && x + NUM_BRK_PTS_HORIZ < cols)
+			{
+				//判断该点（1->0）右边 NUM_BK_PTS_HORIZ 个点内是否有0->1断点
+				for (int i = 1; i <= NUM_BRK_PTS_HORIZ; i++)
+				{
+					bpt.x = x + i;
+					bpt.y = y - 1;
+					if (BreakPoint(pGrdImg, bpt) == 2)
+					{
+						for (int j = x; j <= bpt.x; j++)
+						{
+							tmp.x = j;
+							tmp.y = y - 1;
+							pGrdImg[tmp.y * cols + tmp.x] = 255;
+						}
+						break;
+					}
+				}
+			}
+
+			//填补孔洞
+			holePt.x = x;
+			holePt.y = y - 3;
+			if (holePt.y > 0)
+				pad_hole(pGrdImg, holePt);
+		}
+	}
+}
+
+void ExtractLines::filterPixels()
+{
+	assert(pGrdImg != NULL);
 
 	int sumNeig_9 = 0;
 	int bkPtFlag = 0;
@@ -336,71 +479,71 @@ void ExtractLines::filterPixels(uchar* pImg)
 		for (int x = 1; x < cols - 1; ++x)
 		{
 			//消除4邻域为空的噪点
-			if (pImg[y * cols + x] > 0 && pImg[(y - 1) * cols + x] == 0 &&
-				pImg[(y + 1) * cols + x] == 0 && pImg[y * cols + x - 1] == 0 &&
-				pImg[y * cols + x + 1] == 0)
+			if (pGrdImg[y * cols + x] > 0 && pGrdImg[(y - 1) * cols + x] == 0 &&
+				pGrdImg[(y + 1) * cols + x] == 0 && pGrdImg[y * cols + x - 1] == 0 &&
+				pGrdImg[y * cols + x + 1] == 0)
 			{
-				pImg[y * cols + x] = 0;
+				pGrdImg[y * cols + x] = 0;
 			}
 
 			//根据八邻域点的平均像素值把当前像素设为背景或前景点
-			sumNeig_9 = pImg[y * cols + x] + pImg[(y - 1) * cols + x - 1] +
-				pImg[(y - 1) * cols + x] + pImg[(y - 1) * cols + x + 1] +
-				pImg[y * cols + x - 1] + pImg[y * cols + x + 1] +
-				pImg[(y + 1) * cols + x - 1] + pImg[(y + 1) * cols + x] +
-				pImg[(y + 1) * cols + x + 1];
+			sumNeig_9 = pGrdImg[y * cols + x] + pGrdImg[(y - 1) * cols + x - 1] +
+				pGrdImg[(y - 1) * cols + x] + pGrdImg[(y - 1) * cols + x + 1] +
+				pGrdImg[y * cols + x - 1] + pGrdImg[y * cols + x + 1] +
+				pGrdImg[(y + 1) * cols + x - 1] + pGrdImg[(y + 1) * cols + x] +
+				pGrdImg[(y + 1) * cols + x + 1];
 
 			if (sumNeig_9 / 9 < neig9SumVal)
 			{
-				pImg[y * cols + x] = 0;
+				pGrdImg[y * cols + x] = 0;
 			}
-			else if (pImg[y * cols + x] > 0)
+			else if (pGrdImg[y * cols + x] > 0)
 			{
-				pImg[y * cols + x] = 255;
+				pGrdImg[y * cols + x] = 255;
 			}
 		}
 	}
 
 
-	for (int y = 1; y < rows - 2; ++y)
+	for (int y = 1; y < rows - 1; ++y)
 	{
-		for (int x = 1; x < cols - 2; ++x)
+		for (int x = 1; x < cols - 1; ++x)
 		{
 			pt.x = x;
 			pt.y = y;
 
 			//消除满足左右像素点均为背景点的若干点（3）  
-			if (isNisolatePoints(pImg, pt) == 1)
+			if (isNisolatePoints(pGrdImg, pt) == 1)
 			{
-				pImg[pt.y * cols + pt.x] = 0;
+				pGrdImg[pt.y * cols + pt.x] = 0;
 			}
-			else if (isNisolatePoints(pImg, pt) == 2)
+			else if (isNisolatePoints(pGrdImg, pt) == 2)
 			{
-				pImg[pt.y * cols + pt.x] = 0;
-				pImg[pt.y * cols + pt.x + 1] = 0;
+				pGrdImg[pt.y * cols + pt.x] = 0;
+				pGrdImg[pt.y * cols + pt.x + 1] = 0;
 			}
-			else if (isNisolatePoints(pImg, pt) == 3)
+			else if (isNisolatePoints(pGrdImg, pt) == 3)
 			{
-				pImg[pt.y * cols + pt.x] = 0;
-				pImg[pt.y * cols + pt.x + 1] = 0;
-				pImg[pt.y * cols + pt.x + 2] = 0;
+				pGrdImg[pt.y * cols + pt.x] = 0;
+				pGrdImg[pt.y * cols + pt.x + 1] = 0;
+				pGrdImg[pt.y * cols + pt.x + 2] = 0;
 			}
 
 			/*补水平方向0的点...1***1...*/
-			if (x + 4 < cols && pImg[pt.y * cols + pt.x] == 255 &&
-				(pImg[pt.y * cols + pt.x + 1] == 0 || pImg[pt.y * cols + pt.x + 2] == 0 ||
-					pImg[pt.y * cols + pt.x + 3] == 0) && pImg[pt.y * cols + pt.x + 4] == 255)
+			if (x + 4 < cols && pGrdImg[pt.y * cols + pt.x] == 255 &&
+				(pGrdImg[pt.y * cols + pt.x + 1] == 0 || pGrdImg[pt.y * cols + pt.x + 2] == 0 ||
+					pGrdImg[pt.y * cols + pt.x + 3] == 0) && pGrdImg[pt.y * cols + pt.x + 4] == 255)
 			{
-				pImg[pt.y * cols + pt.x + 1] = 255;
-				pImg[pt.y * cols + pt.x + 2] = 255;
-				pImg[pt.y * cols + pt.x + 3] = 255;
+				pGrdImg[pt.y * cols + pt.x + 1] = 255;
+				pGrdImg[pt.y * cols + pt.x + 2] = 255;
+				pGrdImg[pt.y * cols + pt.x + 3] = 255;
 			}
 
 			//连接水平段的断点
 			bpt.x = x;
 			bpt.y = y - 1;
 
-			bkPtFlag = BreakPoint(pImg, bpt);
+			bkPtFlag = BreakPoint(pGrdImg, bpt);
 
 			if (bkPtFlag == 1 && x + NUM_BRK_PTS_HORIZ < cols)
 			{
@@ -409,13 +552,13 @@ void ExtractLines::filterPixels(uchar* pImg)
 				{
 					bpt.x = x + i;
 					bpt.y = y - 1;
-					if (BreakPoint(pImg, bpt) == 2)
+					if (BreakPoint(pGrdImg, bpt) == 2)
 					{
 						for (int j = x; j <= bpt.x; j++)
 						{
 							tmp.x = j;
 							tmp.y = y - 1;
-							pImg[tmp.y * cols + tmp.x] = 255;
+							pGrdImg[tmp.y * cols + tmp.x] = 255;
 						}
 						break;
 					}
@@ -426,7 +569,7 @@ void ExtractLines::filterPixels(uchar* pImg)
 			holePt.x = x;
 			holePt.y = y - 3;
 			if (holePt.y > 0)
-				pad_hole(pImg, holePt);
+				pad_hole(pGrdImg, holePt);
 		}
 	}
 
@@ -644,15 +787,14 @@ void ExtractLines::pad_hole(uchar* pImg, mPoint pt)
 
 }
 
-uchar* ExtractLines::makeImgThinner(uchar* ptrImg, const int maxIterations)
+void ExtractLines::makeImgThinner(const int maxIterations)
 {
 	/***Extract a binarized image's skeleton***/
-	assert(ptrImg != NULL && rows * cols != 0);
 
 	int width = cols;
 	int height = rows;
 
-	memcpy(pCpyImg, ptrImg, rows * cols * sizeof(uchar));
+	memcpy(pCpyImg, pGrdImg, rows * cols * sizeof(uchar));
 	for (int i = 0; i < rows * cols; ++i)
 	{
 		pCpyImg[i] /= 255;
@@ -784,8 +926,6 @@ uchar* ExtractLines::makeImgThinner(uchar* ptrImg, const int maxIterations)
 	{
 		pCpyImg[i] *= 255;
 	}
-
-	return pCpyImg;
 }
 
 void ExtractLines::findLines(uchar* pImg, mLines& sLines)

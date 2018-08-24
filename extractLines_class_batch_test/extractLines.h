@@ -45,8 +45,8 @@ public:
 	void linesData();
 
 private:
-	void filterPixels(uchar* pImg);
-	uchar* makeImgThinner(uchar*, const int maxIterations = -1);
+	void filterPixels();
+	void makeImgThinner(const int maxIterations = -1);
 
 	void findLines(uchar* pImg, mLines& sLines);
 	bool findNextPoint(mPoint _neighbor_points[], uchar* pImg,
@@ -63,6 +63,8 @@ private:
 	int pixelGrade(uchar* pImg, mPoint pt);
 	void gradGraph();
 	void mark_lines();
+	void grad_graph_binary();
+	void padding_points();
 	void wipe_singular_points(uchar* pThin);
 
 public:
