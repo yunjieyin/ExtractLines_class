@@ -53,43 +53,43 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 	{
 		for (int x = 1; x < cols - 2; ++x)
 		{
-			val0 = pCpyImg[y * cols + x];
-			val1 = pCpyImg[y * cols + x - 1];
-			val2 = pCpyImg[y * cols + x + 1];
-			val3 = pCpyImg[(y - 1) * cols + x];
-			val4 = pCpyImg[(y + 1) * cols + x];
+			val0 = pThin[y * cols + x];
+			val1 = pThin[y * cols + x - 1];
+			val2 = pThin[y * cols + x + 1];
+			val3 = pThin[(y - 1) * cols + x];
+			val4 = pThin[(y + 1) * cols + x];
 
 			if ((val1 == 255 && val3 == 255 && val2 == 0 && val4 == 0 && val0 == 255)
 				|| (val1 == 0 && val2 == 255 && val3 == 255 && val4 == 0 && val0 == 255)
 				|| (val1 == 0 && val2 == 0 && val3 == 255 && val4 == 0 && val0 == 255))
 			{
-				pCpyImg[y * cols + x] = 0;
+				pThin[y * cols + x] = 0;
 			}
 
 			//3 connected point
 			if (val1 + val2 + val3 + val4 == 255 * 3)
 			{
-				if (pCpyImg[(y - 1) * cols + x] == 0 && pCpyImg[(y + 1) * cols + x] == 255)
+				if (pThin[(y - 1) * cols + x] == 0 && pThin[(y + 1) * cols + x] == 255)
 				{
-					pCpyImg[(y + 1) * cols + x] = 0;
+					pThin[(y + 1) * cols + x] = 0;
 				}
-				else if (pCpyImg[(y + 1) * cols + x] == 0 && pCpyImg[(y - 1) * cols + x] == 255)
+				else if (pThin[(y + 1) * cols + x] == 0 && pThin[(y - 1) * cols + x] == 255)
 				{
-					pCpyImg[(y - 1) * cols + x] = 0;
+					pThin[(y - 1) * cols + x] = 0;
 				}
 				else
 				{
-					pCpyImg[y * cols + x] = 0;
+					pThin[y * cols + x] = 0;
 
 					upNum = 0;
 					botNum = 0;;
 					for (int j = -3; j <= 3; j++)
 					{
-						if (x + j > 0 && x + j < cols && pCpyImg[(y - 1) * cols + x + j] == 255)
+						if (x + j > 0 && x + j < cols && pThin[(y - 1) * cols + x + j] == 255)
 						{
 							upNum++;
 						}
-						if (x + j > 0 && x + j < cols && pCpyImg[(y + 1) * cols + x + j] == 255)
+						if (x + j > 0 && x + j < cols && pThin[(y + 1) * cols + x + j] == 255)
 						{
 							botNum++;
 						}
@@ -98,11 +98,11 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 
 					if (upNum > botNum)
 					{
-						pCpyImg[(y + 1) * cols + x] = 0;
+						pThin[(y + 1) * cols + x] = 0;
 					}
 					else
 					{
-						pCpyImg[(y - 1) * cols + x] = 0;
+						pThin[(y - 1) * cols + x] = 0;
 					}
 
 				}
@@ -111,15 +111,15 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 
 			if (y - lagVal > 0)
 			{
-				val0 = pCpyImg[(y - lagVal) * cols + x];
-				val1 = pCpyImg[(y - lagVal) * cols + x - 1];
-				val2 = pCpyImg[(y - lagVal) * cols + x + 1];
-				val3 = pCpyImg[(y - 1 - lagVal) * cols + x];
-				val4 = pCpyImg[(y + 1 - lagVal) * cols + x];
+				val0 = pThin[(y - lagVal) * cols + x];
+				val1 = pThin[(y - lagVal) * cols + x - 1];
+				val2 = pThin[(y - lagVal) * cols + x + 1];
+				val3 = pThin[(y - 1 - lagVal) * cols + x];
+				val4 = pThin[(y + 1 - lagVal) * cols + x];
 				if ((val1 == 0 && val2 == 0 && val3 == 0 && val4 == 255 && val0 == 255)
 					|| (val1 == 0 && val2 == 0 && val3 == 255 && val4 == 0 && val0 == 255))
 				{
-					pCpyImg[(y - lagVal) * cols + x] = 0;
+					pThin[(y - lagVal) * cols + x] = 0;
 				}
 			}
 
@@ -136,17 +136,23 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 			//1 1 0		 0 1 1    0 1 0
 			//  0          0        0
 
-			val0 = pCpyImg[y * cols + x];
-			val1 = pCpyImg[y * cols + x - 1];
-			val2 = pCpyImg[y * cols + x + 1];
-			val3 = pCpyImg[(y - 1) * cols + x];
-			val4 = pCpyImg[(y + 1) * cols + x];
+			val0 = pThin[y * cols + x];
+			val1 = pThin[y * cols + x - 1];
+			val2 = pThin[y * cols + x + 1];
+			val3 = pThin[(y - 1) * cols + x];
+			val4 = pThin[(y + 1) * cols + x];
 
 			if ((val1 == 255 && val3 == 255 && val2 == 0 && val4 == 0 && val0 == 255)
 				|| (val1 == 0 && val2 == 255 && val3 == 255 && val4 == 0 && val0 == 255)
 				|| (val1 == 0 && val2 == 0 && val3 == 255 && val4 == 0 && val0 == 255))
 			{
-				pCpyImg[y * cols + x] = 0;
+				pThin[y * cols + x] = 0;
+			}
+
+			//connect ..101...
+			if (val0 == 0 && val1 == 255 && val2 == 255)
+			{
+				pThin[y * cols + x] = 255;
 			}
 		}
 	}
@@ -273,15 +279,34 @@ int ExtractLines::pixelGrade(uchar* pImg, mPoint pt)
 {
 	/***compute a pixel's grade at point 'pt'***/
 	assert(pImg != NULL && pt.x > 0 && pt.y > 0);
-
-	int dx = 0; // pImg[cols * pt.y + pt.x + 1] - pImg[cols * pt.y + pt.x];
-	int dy = pImg[cols * (pt.y + 1) + pt.x] - pImg[cols * pt.y + pt.x];
-
+	int nStride = 2;
+	int dx;
+	int dy;
 	int grade;
 
-	if (pImg[cols * (pt.y + 1) + pt.x] > pImg[cols * pt.y + pt.x])
+	if (pt.y + nStride <= rows - 1)
 	{
-		grade = dx + dy;
+		dy = pImg[cols * (pt.y + nStride) + pt.x] - pImg[cols * pt.y + pt.x];
+	}
+	else
+	{
+		dy = 0;
+	}
+	
+	if (pt.x + nStride <= cols - 1)
+	{
+		dx = pImg[cols * pt.y + pt.x + nStride] - pImg[cols * pt.y + pt.x];
+		//dx = 0;
+	}
+	else
+	{
+		dx = 0;
+	}
+
+
+	if (pImg[cols * (pt.y + nStride) + pt.x] > pImg[cols * pt.y + pt.x])
+	{
+		grade = int(dx / 5) + dy;
 	}
 	else
 	{
@@ -300,6 +325,7 @@ void ExtractLines::filterPixels(uchar* pImg)
 
 	int sumNeig_9 = 0;
 	int bkPtFlag = 0;
+	const unsigned int neig9SumVal = 30;
 	mPoint pt;
 	mPoint bpt;
 	mPoint holePt;
@@ -324,21 +350,13 @@ void ExtractLines::filterPixels(uchar* pImg)
 				pImg[(y + 1) * cols + x - 1] + pImg[(y + 1) * cols + x] +
 				pImg[(y + 1) * cols + x + 1];
 
-			if (sumNeig_9 / 9 < 20)
+			if (sumNeig_9 / 9 < neig9SumVal)
 			{
 				pImg[y * cols + x] = 0;
 			}
 			else if (pImg[y * cols + x] > 0)
 			{
 				pImg[y * cols + x] = 255;
-			}
-
-			//消除满足左右像素点均为背景点的当前点
-			if (x + 2 < cols - 1 &&
-				(pImg[y * cols + x - 1] + pImg[y * cols + x + 1] == 0) &&
-				pImg[y * cols + x] == 255)
-			{
-				pImg[y * cols + x] = 0;
 			}
 		}
 	}
