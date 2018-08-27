@@ -11,7 +11,7 @@
 
 #define NUM_BRK_PTS_HORIZ 10
 #define NUM_CON_PTS_HORIZ 15
-#define LINE_MAX_POINTS 1024
+#define LINE_MAX_POINTS 2048
 #define LINE_MAX_NUMS 64
 #define LINE_LEAST_POINTS 10
 #define GRAD_THRESH_VAL 15
@@ -58,7 +58,7 @@ private:
 	int BreakPoint(uchar* pImg, mPoint pt);
 	int isNisolatePoints(uchar* pImg, mPoint pt);
 	void pad_hole(uchar* pImg, mPoint pt);
-	void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoint>& linePts);
+	void mark_connect_region(uchar* pThin, mPoint pt, mPoint* pArr, unsigned int& idxFront, unsigned int& idxBack);
 
 	int pixelGrade(uchar* pImg, mPoint pt);
 	void gradGraph();
@@ -70,9 +70,10 @@ private:
 public:
 	mSize srcImgSize;
 	mLines linesSet;
-	std::vector<std::deque<mPoint>> markedLines;
 	unsigned int rows;
 	unsigned int cols;
+
+	std::vector<std::deque<mPoint>> markedLines;
 
 public:
 	uchar* pIndex = NULL;

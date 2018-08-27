@@ -190,6 +190,7 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 	}
 }
 
+
 void ExtractLines::mark_lines()
 {
 	makeImgThinner();
@@ -198,31 +199,43 @@ void ExtractLines::mark_lines()
 	memcpy(pThinImg, pCpyImg, rows * cols * sizeof(uchar));
 
 	mPoint seed;
-	std::deque<mPoint> linePts;
+	unsigned int idxFront = 0;
+	unsigned int idxBack = 0;
+	unsigned int lineNum = 0;
 	while (findFirstPoint(pCpyImg, seed))
 	{
-		linePts.clear();
-		mark_connect_region(pCpyImg, seed, linePts);
+		mPoint lineDataArr[LINE_MAX_POINTS];
+		mark_connect_region(pCpyImg, seed, lineDataArr, idxFront, idxBack);
 
-		if (linePts.size() > LINE_LEAST_POINTS)
+		if (idxBack - idxFront + 1 > LINE_LEAST_POINTS)
 		{
-			markedLines.push_back(linePts);
+			int cnt = 0;
+			for (int idx = idxFront; idx <= idxBack; ++idx)
+			{
+				linesSet.linesSets[lineNum * LINE_MAX_POINTS + cnt] = lineDataArr[idx];
+				cnt++;
+			}
+			linesSet.linesSize[lineNum] = cnt;
+			lineNum++;
 		}
 	}
+	
+	linesSet.linesNum = lineNum;
 
-	//convert data
-	for (int i = 0; i < markedLines.size(); i++)
+	//convert test data
+	/*for (int i = 0; i < linesSet.linesNum; ++i)
 	{
-		linesSet.linesSize[i] = markedLines[i].size();
-
-		for (int j = 0; j < markedLines[i].size(); j++)
+		std::deque<mPoint> lineVec;
+		for (int j = 0; j < linesSet.linesSize[i]; ++j)
 		{
-			linesSet.linesSets[i * LINE_MAX_POINTS + j] = markedLines[i][j];
+			lineVec.push_back(linesSet.linesSets[i * LINE_MAX_POINTS + j]);
 		}
-	}
 
-	linesSet.linesNum = markedLines.size();
+		markedLines.push_back(lineVec);
+	}*/
 }
+
+
 
 void ExtractLines::linesData()
 {
@@ -241,13 +254,12 @@ void ExtractLines::linesData()
 	gradGraph();
 	grad_graph_binary();
 	padding_points();
-	//filterPixels();
 	mark_lines();
 }
 
-void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoint>& linePts)
+
+void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, mPoint* pArr, unsigned int& idxFront, unsigned int& idxBack)
 {
-	linePts.clear();
 	mPoint p1, p2, p3, p4, p5, p6, p7, p8;
 
 	p1.x = -1; p1.y = -1;
@@ -263,10 +275,14 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 	std::stack<mPoint> seeds;
 	seeds.push(pt);
 
-	linePts.push_back(pt);
+	idxBack = idxFront = int(LINE_MAX_POINTS / 2);
+	pArr[idxBack] = pt;
 
 	mPoint seed;
 	mPoint tmpPt;
+	int tmpx;
+	int tmpy;
+
 	while (!seeds.empty())
 	{
 		seed = seeds.top();
@@ -274,8 +290,8 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 
 		for (size_t i = 0; i < 8; i++)
 		{
-			int tmpx = seed.x + connects[i].x;
-			int tmpy = seed.y + connects[i].y;
+			tmpx = seed.x + connects[i].x;
+			tmpy = seed.y + connects[i].y;
 
 			if (tmpx < 0 || tmpy < 0 || tmpx >= cols || tmpy >= rows)
 				continue;
@@ -285,23 +301,23 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, std::deque<mPoin
 				tmpPt.x = tmpx;
 				tmpPt.y = tmpy;
 
-				if (tmpPt.x >= linePts.back().x )
+				if (tmpPt.x >= pArr[idxBack].x && (++idxBack) < LINE_MAX_POINTS)
 				{
-					linePts.push_back(tmpPt);
+					pArr[idxBack] = tmpPt;
 				}
 				else
 				{
-					linePts.push_front(tmpPt);
+					assert(--idxFront >= 0);
+					pArr[idxFront] = tmpPt;
 				}
-				
+
 				pThin[tmpy * cols + tmpx] = 0;
-
 				seeds.push(tmpPt);
-
 			}
 
 		}
 	}
+
 
 	pThin[pt.y * cols + pt.x] = 0;
 }
@@ -324,19 +340,10 @@ int ExtractLines::pixelGrade(uchar* pImg, mPoint pt)
 		dy = 0;
 	}
 	
-	if (pt.x + nStride <= cols - 1)
-	{
-		dx = pImg[cols * pt.y + pt.x + nStride] - pImg[cols * pt.y + pt.x];
-	}
-	else
-	{
-		dx = 0;
-	}
-
 
 	if (pImg[cols * (pt.y + nStride) + pt.x] > pImg[cols * pt.y + pt.x])
 	{
-		grade = int(dx / 5) + dy;
+		grade =  dy;
 	}
 	else
 	{
