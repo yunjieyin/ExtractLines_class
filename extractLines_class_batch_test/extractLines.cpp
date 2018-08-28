@@ -69,6 +69,136 @@ void ExtractLines::gradGraph()
 	}
 }
 
+void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
+{
+	mPoint p1, p2;
+	mPoint p1LU, p1LM, p1LB;
+	mPoint p2LU, p2LM, p2LB;
+	bool bStop1 = true;
+	bool bStop2 = true;
+	bool bF1 = false, bF2 = false, bF3 = false;
+	const int nSize = 1024;
+	//std::vector<mPoint> vec1, vec2;
+	mPoint arr1[nSize], arr2[512];
+	mPoint *ptr1 = arr1, *ptr2 = arr2;
+	int r = bLeft ? 1 : -1;
+
+	p1.x = x, p1.y = y - 1;
+	p2.x = x, p2.y = y + 1;
+	//vec1.push_back(p1);
+	//vec2.push_back(p2);
+	*(ptr1++) = p1;
+	*(ptr2++) = p2;
+
+
+	p1LU.x = p1.x - 1 * (r), p1LU.y = p1.y - 2;
+	p1LM.x = p1.x - 1 * (r), p1LM.y = p1.y - 1;
+	p1LB.x = p1.x - 1 * (r), p1LB.y = p1.y;
+
+	p2LU.x = p2.x - 1 * (r), p2LU.y = p2.y;
+	p2LM.x = p2.x - 1 * (r), p2LM.y = p2.y + 1;
+	p2LB.x = p2.x - 1 * (r), p2LB.y = p2.y + 2;
+
+	while (p1LU.y >= 0 &&(pThin[p1LU.y * cols + p1LU.x] == 255
+		|| pThin[p1LM.y * cols + p1LM.x] == 255
+		|| pThin[p1LB.y * cols + p1LB.x] == 255))
+	{
+		if (bStop1)
+		{
+			bF1 = false, bF2 = false, bF3 = false;
+			
+			if (pThin[p1LB.y * cols + p1LB.x] == 255)
+			{
+				p1 = p1LB;
+				//vec1.push_back(p1);
+				*(ptr1++) = p1;
+				bF3 = true;
+			}
+
+			if (pThin[p1LM.y * cols + p1LM.x] == 255)
+			{
+				p1 = p1LM;
+				//vec1.push_back(p1);
+				*(ptr1++) = p1;
+				bF2 = true;
+			}
+			
+
+			if (pThin[p1LU.y * cols + p1LU.x] == 255)
+			{
+				p1 = p1LU;
+				//vec1.push_back(p1);
+				*(ptr1++) = p1;
+				bF1 = true;
+			}
+
+			if(!bF1 && !bF2 && !bF3)
+			{
+				bStop1 = false;
+			}
+		}
+
+		p1LU.x = p1.x - 1 * (r), p1LU.y = p1.y - 1;
+		p1LM.x = p1.x - 1 * (r), p1LM.y = p1.y ;
+		p1LB.x = p1.x - 1 * (r), p1LB.y = p1.y + 1;
+	}
+
+	while (p2LB.y < rows && (pThin[p2LU.y * cols + p2LU.x] == 255
+		|| pThin[p2LM.y * cols + p2LM.x] == 255
+		|| pThin[p2LB.y * cols + p2LB.x] == 255))
+	{
+		if (bStop2)
+		{
+			bF1 = false, bF2 = false, bF3 = false;
+			if (pThin[p2LU.y * cols + p2LU.x] == 255)
+			{
+				p2 = p2LU;
+				//vec2.push_back(p2);
+				*(ptr2++) = p2;
+				bF1 = true;
+			}
+			if (pThin[p2LM.y * cols + p2LM.x] == 255)
+			{
+				p2 = p2LM;
+				//vec2.push_back(p2);
+				*(ptr2++) = p2;
+				bF2 = true;
+			}
+			if (pThin[p2LB.y * cols + p2LB.x] == 255)
+			{
+				p2 = p2LB;
+				//vec2.push_back(p2);
+				*(ptr2++) = p2;
+				bF3 = true;
+			}
+
+			if(!bF1 && !bF2 && !bF3)
+			{
+				bStop2 = false;
+			}
+		}
+
+		p2LU.x = p2.x - 1 * (r), p2LU.y = p2.y - 1;
+		p2LM.x = p2.x - 1 * (r), p2LM.y = p2.y ;
+		p2LB.x = p2.x - 1 * (r), p2LB.y = p2.y + 1;
+	}
+
+	if (abs(ptr1 - arr1) > abs(ptr2 - arr2))//vec1.size() >= vec2.size()
+	{
+		for (mPoint* ptr = arr2; ptr != ptr2; ++ptr)//int m = 0; m < vec2.size(); m++
+		{
+			pThin[(*ptr).y * cols + (*ptr).x] = 0; //vec2[m].y * cols + vec2[m].x
+		}
+	}
+	else
+	{
+		for (mPoint* ptr = arr1; ptr != ptr1; ++ptr)//int m = 0; m < vec1.size(); m++
+		{
+			pThin[(*ptr).y * cols + (*ptr).x] = 0;
+		}
+	}
+}
+
 void ExtractLines::wipe_singular_points(uchar* pThin)
 {
 	//del illegal points
@@ -79,6 +209,8 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 	unsigned int idxCen, idxUL, idxU, idxUR, idxL, idxR, idxBL, idxB, idxBR;
 	bool f1, f2, f3, f4;
 	const int lagVal = 3;
+	int nLeft = 0;
+	int nRigh = 0;
 
 	for (int y = 1; y < rows - 2; ++y)
 	{
@@ -155,7 +287,54 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 			// >=3 connected point
 			if (val0 == 255 && sumNei >= 255 * 3)
 			{
+
 				if (val2 == 0 && val4 == 255 && val6 == 255 && val8 == 255)
+				{
+					pThin[idxB] = 0;
+				}
+				else if (val6 == 0 && val2 == 255 && val4 == 255 && val8 == 255)
+				{
+					pThin[idxU] = 0;
+				}
+
+				nLeft = 0;
+				nRigh = 0;
+				for (int m = x - 2; m <= x + 2; m++)
+				{
+					if (m <= x - 1)
+					{
+						for (int n = y - 5; n <= y + 5; n++)
+						{
+							if (m > 0 && m < cols && n > 0 && n < rows && pThin[n * cols + m] == 255)
+								nLeft++;
+						}
+					}
+
+					if (m >= x + 1)
+					{
+						for (int n = y - 5; n <= y + 5; n++)
+						{
+							if (m > 0 && m < cols && n > 0 && n < rows && pThin[n * cols + m] == 255)
+								nRigh++;
+						}
+					}
+				}
+
+
+				if (nLeft >= nRigh)
+				{
+					//left direction				
+					del_biforked_lines(pThin, x, y, true);
+				}
+				else
+				{
+					//right direction
+					del_biforked_lines(pThin, x, y, false);
+				}
+
+		
+
+				/*if (val2 == 0 && val4 == 255 && val6 == 255 && val8 == 255)
 				{
 					pThin[idxB] = 0;
 				}
@@ -189,8 +368,8 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 						pThin[idxUL] = 0;
 						pThin[idxUR] = 0;
 					}
+				}*/
 
-				}
 
 			}
 		}
@@ -214,7 +393,7 @@ void ExtractLines::mark_lines()
 		mPoint lineDataArr[LINE_MAX_POINTS];
 		mark_connect_region(pCpyImg, seed, lineDataArr, idxFront, idxBack);
 
-		if (idxBack - idxFront + 1 > LINE_LEAST_POINTS)
+		if (idxBack - idxFront + 1 >= LINE_LEAST_POINTS)
 		{
 			int cnt = 0;
 			for (int idx = idxFront; idx <= idxBack; ++idx)

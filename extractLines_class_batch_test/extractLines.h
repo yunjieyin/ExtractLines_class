@@ -58,6 +58,7 @@ private:
 	void grad_graph_binary();
 	void padding_points();
 	void wipe_singular_points(uchar* pThin);
+	void del_biforked_lines(uchar* pThin, int x, int y, bool bLeft);
 
 public:
 	mSize srcImgSize;
