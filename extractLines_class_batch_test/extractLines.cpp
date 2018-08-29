@@ -71,25 +71,22 @@ void ExtractLines::gradGraph()
 
 void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 {
+	assert(x >= 0 && y >= 0);
+	const int nSize = 1024;
 	mPoint p1, p2;
 	mPoint p1LU, p1LM, p1LB;
 	mPoint p2LU, p2LM, p2LB;
+	mPoint arr1[nSize], arr2[nSize];
+	mPoint *ptr1 = arr1, *ptr2 = arr2;
 	bool bStop1 = true;
 	bool bStop2 = true;
 	bool bF1 = false, bF2 = false, bF3 = false;
-	const int nSize = 1024;
-	//std::vector<mPoint> vec1, vec2;
-	mPoint arr1[nSize], arr2[512];
-	mPoint *ptr1 = arr1, *ptr2 = arr2;
 	int r = bLeft ? 1 : -1;
 
 	p1.x = x, p1.y = y - 1;
 	p2.x = x, p2.y = y + 1;
-	//vec1.push_back(p1);
-	//vec2.push_back(p2);
 	*(ptr1++) = p1;
 	*(ptr2++) = p2;
-
 
 	p1LU.x = p1.x - 1 * (r), p1LU.y = p1.y - 2;
 	p1LM.x = p1.x - 1 * (r), p1LM.y = p1.y - 1;
@@ -99,7 +96,8 @@ void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 	p2LM.x = p2.x - 1 * (r), p2LM.y = p2.y + 1;
 	p2LB.x = p2.x - 1 * (r), p2LB.y = p2.y + 2;
 
-	while (p1LU.y >= 0 &&(pThin[p1LU.y * cols + p1LU.x] == 255
+	while ((p1LU.y >= 0 && p1LB.y < rows && p1LU.x >= 0 && p1LU.x < cols)
+		&&(pThin[p1LU.y * cols + p1LU.x] == 255
 		|| pThin[p1LM.y * cols + p1LM.x] == 255
 		|| pThin[p1LB.y * cols + p1LB.x] == 255))
 	{
@@ -110,7 +108,6 @@ void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 			if (pThin[p1LB.y * cols + p1LB.x] == 255)
 			{
 				p1 = p1LB;
-				//vec1.push_back(p1);
 				*(ptr1++) = p1;
 				bF3 = true;
 			}
@@ -118,7 +115,6 @@ void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 			if (pThin[p1LM.y * cols + p1LM.x] == 255)
 			{
 				p1 = p1LM;
-				//vec1.push_back(p1);
 				*(ptr1++) = p1;
 				bF2 = true;
 			}
@@ -127,7 +123,6 @@ void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 			if (pThin[p1LU.y * cols + p1LU.x] == 255)
 			{
 				p1 = p1LU;
-				//vec1.push_back(p1);
 				*(ptr1++) = p1;
 				bF1 = true;
 			}
@@ -143,7 +138,8 @@ void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 		p1LB.x = p1.x - 1 * (r), p1LB.y = p1.y + 1;
 	}
 
-	while (p2LB.y < rows && (pThin[p2LU.y * cols + p2LU.x] == 255
+	while ((p2LU.y >= 0 && p2LB.y < rows && p2LU.x >=0 && p2LB.x < cols)
+		&& (pThin[p2LU.y * cols + p2LU.x] == 255
 		|| pThin[p2LM.y * cols + p2LM.x] == 255
 		|| pThin[p2LB.y * cols + p2LB.x] == 255))
 	{
@@ -153,21 +149,18 @@ void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 			if (pThin[p2LU.y * cols + p2LU.x] == 255)
 			{
 				p2 = p2LU;
-				//vec2.push_back(p2);
 				*(ptr2++) = p2;
 				bF1 = true;
 			}
 			if (pThin[p2LM.y * cols + p2LM.x] == 255)
 			{
 				p2 = p2LM;
-				//vec2.push_back(p2);
 				*(ptr2++) = p2;
 				bF2 = true;
 			}
 			if (pThin[p2LB.y * cols + p2LB.x] == 255)
 			{
 				p2 = p2LB;
-				//vec2.push_back(p2);
 				*(ptr2++) = p2;
 				bF3 = true;
 			}
@@ -183,16 +176,16 @@ void ExtractLines::del_biforked_lines(uchar* pThin, int x, int y, bool bLeft)
 		p2LB.x = p2.x - 1 * (r), p2LB.y = p2.y + 1;
 	}
 
-	if (abs(ptr1 - arr1) > abs(ptr2 - arr2))//vec1.size() >= vec2.size()
+	if (abs(ptr1 - arr1) > abs(ptr2 - arr2))
 	{
-		for (mPoint* ptr = arr2; ptr != ptr2; ++ptr)//int m = 0; m < vec2.size(); m++
+		for (mPoint* ptr = arr2; ptr != ptr2; ++ptr)
 		{
-			pThin[(*ptr).y * cols + (*ptr).x] = 0; //vec2[m].y * cols + vec2[m].x
+			pThin[(*ptr).y * cols + (*ptr).x] = 0;
 		}
 	}
 	else
 	{
-		for (mPoint* ptr = arr1; ptr != ptr1; ++ptr)//int m = 0; m < vec1.size(); m++
+		for (mPoint* ptr = arr1; ptr != ptr1; ++ptr)
 		{
 			pThin[(*ptr).y * cols + (*ptr).x] = 0;
 		}
@@ -284,10 +277,9 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 			sumNei = val1 + val2 + val3 + val4 +
 				val5 + val6 + val7 + val8;
 
-			// >=3 connected point
+			// break forked path
 			if (val0 == 255 && sumNei >= 255 * 3)
 			{
-
 				if (val2 == 0 && val4 == 255 && val6 == 255 && val8 == 255)
 				{
 					pThin[idxB] = 0;
@@ -331,46 +323,6 @@ void ExtractLines::wipe_singular_points(uchar* pThin)
 					//right direction
 					del_biforked_lines(pThin, x, y, false);
 				}
-
-		
-
-				/*if (val2 == 0 && val4 == 255 && val6 == 255 && val8 == 255)
-				{
-					pThin[idxB] = 0;
-				}
-				else if (val6 == 0 && val2 == 255 && val4 == 255 && val8 == 255)
-				{
-					pThin[idxU] = 0;
-				}
-				else
-				{
-					upNum = 0;
-					botNum = 0;
-					for (int j = -5; j <= 5; j++)
-					{
-						if (x + j >= 0 && x + j < cols && pThin[idxU + j] == 255)
-							upNum++;
-
-						if (x + j >= 0 && x + j < cols && pThin[idxB + j] == 255)
-							botNum++;
-					}
-
-
-					if (upNum >= botNum)
-					{
-						pThin[idxB] = 0;
-						pThin[idxBL] = 0;
-						pThin[idxBR] = 0;
-					}
-					else
-					{
-						pThin[idxU] = 0;
-						pThin[idxUL] = 0;
-						pThin[idxUR] = 0;
-					}
-				}*/
-
-
 			}
 		}
 	}

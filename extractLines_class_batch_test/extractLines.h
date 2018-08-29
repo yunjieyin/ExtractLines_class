@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <opencv/cv.h>
 #include <opencv2/opencv.hpp>
@@ -13,7 +12,7 @@
 #define NUM_CON_PTS_HORIZ 15
 #define LINE_MAX_POINTS 2048
 #define LINE_MAX_NUMS 64
-#define LINE_LEAST_POINTS 10
+#define LINE_LEAST_POINTS 8
 #define GRAD_THRESH_VAL 20
 
 typedef unsigned char uchar;
