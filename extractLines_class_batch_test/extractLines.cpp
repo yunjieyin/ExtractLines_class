@@ -436,14 +436,19 @@ void ExtractLines::mark_connect_region(uchar* pThin, mPoint pt, mPoint* pArr, un
 				tmpPt.x = tmpx;
 				tmpPt.y = tmpy;
 
-				if (tmpPt.x >= pArr[idxBack].x && (++idxBack) < LINE_MAX_POINTS)
+				if ((tmpPt.x == pArr[idxBack].x + 1) && (idxBack + 1) < LINE_MAX_POINTS)
 				{
+					++idxBack;
 					pArr[idxBack] = tmpPt;
 				}
 				else
 				{
-					assert(--idxFront >= 0);
-					pArr[idxFront] = tmpPt;
+					assert(idxFront - 1 >= 0);
+					if ((tmpPt.x + 1 == pArr[idxFront].x))
+					{
+						--idxFront;
+						pArr[idxFront] = tmpPt;
+					}
 				}
 
 				pThin[tmpy * cols + tmpx] = 0;
