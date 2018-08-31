@@ -23,9 +23,12 @@ void ExtractLines::gradGraph()
 {
 	mPoint pt;
 	int nStride = 2;
+	const int threVal = 50;
+	const int pixVal = 125;
 	int dx;
 	int dy;
 	int grade;
+	int idxPt, idxStdPt, idxStd2Pt, idxPrePt;
 
 	for (int x = 0; x < cols; x = x + 1)
 	{
@@ -33,37 +36,37 @@ void ExtractLines::gradGraph()
 		{
 			pt.x = x;
 			pt.y = y;
+			idxPt = cols * pt.y + pt.x;
+			idxStdPt = cols * (pt.y + nStride) + pt.x;
+			idxStd2Pt = cols * (pt.y + 1 + nStride) + pt.x;
+			idxPrePt = cols * (pt.y + 1) + pt.x;
 
 			if (pt.y + nStride <= rows - 1)
 			{
-				dy = pSrcImg[cols * (pt.y + nStride) + pt.x] - pSrcImg[cols * pt.y + pt.x];
+				dy = pSrcImg[idxStdPt] - pSrcImg[idxPt];
 			}
 			else
 			{
 				dy = 0;
 			}
 
-			//if (pt.x + nStride <= cols - 1)
-			//{
-			//	dx = 0;// pSrcImg[cols * pt.y + pt.x + nStride] - pSrcImg[cols * pt.y + pt.x];
-			//}
-			//else
-			//{
-			//	dx = 0;
-			//}
 
-			if (pt.y + nStride <= rows - 1 && pSrcImg[cols * (pt.y + nStride) + pt.x] > pSrcImg[cols * pt.y + pt.x])
+			if (pt.y + nStride <= rows - 1
+				&& pSrcImg[idxStdPt] > pSrcImg[idxPt] + GRAD_THRESH_VAL)
 			{
-				grade =  dy;
+				if (pSrcImg[idxPt] > pixVal && pSrcImg[idxStdPt] - pSrcImg[idxPt] < threVal)
+				{
+					grade = 0;
+				}
+				else
+				{
+					grade = dy;
+				}
 			}
 			else
 			{
 				grade = 0;
 			}
-
-			if (grade < GRAD_THRESH_VAL)
-				grade = 0;
-
 			pGrdImg[y * cols + x] = grade;
 		}
 	}
